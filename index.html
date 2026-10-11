@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kantin OMK Paroki St. Yohanes Gabriel Perboyre (YGP) - Pencatatan Penjualan</title>
+  <meta name="description" content="Aplikasi digitalisasi pencatatan penjualan dan rekonsiliasi kasir Kantin OMK Paroki St. Yohanes Gabriel Perboyre (YGP)">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="assets/icon-192.svg">
+  <link rel="apple-touch-icon" href="assets/icon-192.svg">
+  <meta name="theme-color" content="#0d9488">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/components.css">
+</head>
+<body>
+
+  <!-- App Header -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand-section">
+        <div class="brand-logo-badge" title="OMK YGP">🥐</div>
+        <div class="brand-text">
+          <h1>Kantin OMK Paroki YGP</h1>
+          <p>St. Yohanes Gabriel Perboyre • Pencatatan & Kasir Digital</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="btn-share-session" class="btn btn-primary btn-sm" title="Bagikan / Transfer Sesi ke Rekan Tim">
+          🔗 <span class="hide-mobile">Bagikan ke Tim</span>
+        </button>
+        <button id="btn-edit-session-meta" class="btn btn-outline btn-sm" title="Ubah Info Sesi & Modal Awal">
+          ⚙️ <span class="hide-mobile">Info Sesi</span>
+        </button>
+        <button id="btn-quick-wa" class="btn btn-whatsapp btn-sm" title="Salin Laporan WhatsApp">
+          📲 <span class="hide-mobile">Laporan WA</span>
+        </button>
+        <button id="btn-toggle-theme" class="btn btn-outline btn-icon" title="Ganti Tema">
+          🌙
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Session Meta Info Banner -->
+  <section class="meta-banner">
+    <div class="meta-container">
+      <div class="meta-info-group">
+        <span class="meta-chip">
+          📅 <strong id="meta-date-display">Minggu, 12 Okt 2026</strong>
+        </span>
+        <span class="meta-chip">
+          ⏰ <strong id="meta-shift-display">Misa Pagi</strong>
+        </span>
+        <span class="meta-chip">
+          👤 Petugas: <strong id="meta-pic-display">Tim OMK YGP</strong>
+        </span>
+        <span class="meta-chip initial-cash" title="Uang Awal Siap Kembalian">
+          💵 Modal Kembalian: <strong id="meta-initial-cash-display">Rp 150.000</strong>
+        </span>
+      </div>
+      <div>
+        <button id="btn-new-session" class="btn btn-outline btn-sm">
+          ✨ Sesi Baru
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Sticky KPI Live Summary Bar -->
+  <section class="kpi-bar">
+    <div class="kpi-container">
+      <div class="kpi-item">
+        <span class="kpi-label">Omzet Seharusnya</span>
+        <span id="kpi-expected-revenue" class="kpi-value">Rp 0</span>
+      </div>
+      <div class="kpi-item cash-kpi">
+        <span class="kpi-label">Cash Sistem</span>
+        <span id="kpi-expected-cash" class="kpi-value">Rp 0</span>
+      </div>
+      <div class="kpi-item qris-kpi">
+        <span class="kpi-label">QRIS Otomatis</span>
+        <span id="kpi-expected-qris" class="kpi-value">Rp 0</span>
+      </div>
+      <div class="kpi-item">
+        <span class="kpi-label">Terjual / Sisa</span>
+        <span id="kpi-stock-ratio" class="kpi-value">0 / 0 pcs</span>
+      </div>
+      <div class="kpi-item profit-kpi">
+        <span class="kpi-label">Pendapatan Bersih (Riil)</span>
+        <span id="kpi-net-profit" class="kpi-value">Rp 0</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Navigation Tabs -->
+  <nav class="nav-tabs" aria-label="Menu Utama">
+    <button class="tab-btn active" data-tab="cashier">
+      🛍️ Penjualan & Kasir
+    </button>
+    <button class="tab-btn" data-tab="closing">
+      📊 Tutup Kasir & Rekonsiliasi
+    </button>
+    <button class="tab-btn" data-tab="templates">
+      ⚙️ Template Barang
+    </button>
+    <button class="tab-btn" data-tab="history">
+      📁 Riwayat Sesi
+    </button>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="app-main">
+
+    <!-- ========================================== -->
+    <!-- TAB 1: PENJUALAN & KASIR -->
+    <!-- ========================================== -->
+    <section id="tab-cashier" class="tab-panel active">
+      
+      <!-- Toolbar Filter & View Switcher -->
+      <div class="toolbar-card">
+        <div class="toolbar-top-row">
+          <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="search-input" placeholder="Cari nama barang atau snack...">
+          </div>
+          <div class="view-mode-toggle">
+            <button id="view-mode-cards" class="view-toggle-btn active" title="Tampilan Kartu Cepat">
+              🗂️ Kartu
+            </button>
+            <button id="view-mode-table" class="view-toggle-btn" title="Tampilan Tabel Spreadsheet">
+              📋 Tabel
+            </button>
+          </div>
+          <button id="btn-add-item-modal" class="btn btn-primary btn-sm">
+            ➕ Tambah Barang
+          </button>
+        </div>
+
+        <!-- Category Filter Pills -->
+        <div id="category-pills" class="category-pills">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+
+      <!-- Checklist & Crosscheck Info Helper -->
+      <div class="checklist-helper-bar">
+        <div class="info-text">
+          <span>📋 <strong>Crosscheck Stok Awal:</strong></span>
+          <span id="checklist-initial-progress">0/0 barang siap</span>
+        </div>
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+          <button id="btn-check-all-initial" class="btn btn-outline btn-sm">
+            ✅ Centang Semua Stok Awal
+          </button>
+          <button id="btn-sync-remaining" class="btn btn-outline btn-sm" title="Samakan sisa riil fisik dengan hitungan sistem">
+            🔄 Samakan Sisa Fisik
+          </button>
+        </div>
+      </div>
+
+      <!-- Content: Cards View (Default Mobile/POS View) -->
+      <div id="cards-container" class="items-cards-grid">
+        <!-- Rendered via JS -->
+      </div>
+
+      <!-- Content: Table View (Spreadsheet View) -->
+      <div id="table-container" class="table-responsive-container" style="display: none;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>No</th>
+              <th>Barang</th>
+              <th>Harga</th>
+              <th title="Stok yang dibawa / tersedia saat gelar produk">
+                Stok Awal
+              </th>
+              <th>Terjual Cash</th>
+              <th>Terjual QRIS</th>
+              <th title="Total unit terjual">Total Terjual</th>
+              <th title="Stok awal dikurangi terjual">Sisa Sistem</th>
+              <th title="Cek fisik sisa akhir barang">Sisa Riil Fisik</th>
+              <th>Subtotal</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="table-body">
+            <!-- Rendered via JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 2: TUTUP KASIR & REKONSILIASI -->
+    <!-- ========================================== -->
+    <section id="tab-closing" class="tab-panel">
+
+      <!-- Final Net Profit Banner (User Formula: cash + qris - 150 modal) -->
+      <div class="final-profit-banner">
+        <div class="profit-content">
+          <h2>🏆 Total Pendapatan Bersih Kantin OMK</h2>
+          <div id="hero-final-profit" class="profit-amount">Rp 0</div>
+          <div class="profit-formula-hint">
+            Rumus: <strong>Cash Riil + QRIS Riil - Modal Awal (Rp 150.000)</strong>
+          </div>
+        </div>
+        <div class="profit-actions-group">
+          <button id="btn-copy-wa-closing" class="btn btn-whatsapp">
+            📲 Salin Laporan WhatsApp
+          </button>
+          <button id="btn-save-session-archive" class="btn btn-primary">
+            💾 Simpan & Arsipkan Sesi
+          </button>
+          <button id="btn-print-report" class="btn btn-outline" style="background: rgba(255,255,255,0.9); color: #0f172a;">
+            🖨️ Cetak / PDF
+          </button>
+        </div>
+      </div>
+
+      <div class="reconciliation-grid">
+        
+        <!-- CARD 1: Modal Awal Kasir -->
+        <div class="recon-card">
+          <div class="recon-card-header">
+            <h3 class="recon-card-title">💵 1. Modal Awal Kasir</h3>
+            <span class="meta-chip initial-cash">Uang Kembalian</span>
+          </div>
+          <p style="font-size: 0.82rem; color: var(--text-muted);">
+            Uang pecahan kecil yang disiapkan sebelum buka stan kantin untuk kembalian pembeli.
+          </p>
+          <div class="recon-input-group">
+            <label for="input-recon-initial-cash">Nominal Modal Awal (Rp):</label>
+            <input type="number" id="input-recon-initial-cash" class="recon-input-field" value="150000" step="5000">
+          </div>
+          <div class="recon-metric-row">
+            <span class="recon-metric-label">Status Modal:</span>
+            <span class="recon-metric-value" style="color: var(--accent-cash);">Wajib Dikembalikan ke Kas</span>
+          </div>
+        </div>
+
+        <!-- CARD 2: Perhitungan Sistem (Otomatis) -->
+        <div class="recon-card">
+          <div class="recon-card-header">
+            <h3 class="recon-card-title">🤖 2. Omzet Seharusnya (Sistem)</h3>
+            <span class="meta-chip">Otomatis Terhitung</span>
+          </div>
+          <div class="recon-metric-row">
+            <span class="recon-metric-label">Total Omzet Penjualan:</span>
+            <span id="recon-sys-revenue" class="recon-metric-value">Rp 0</span>
+          </div>
+          <div class="recon-metric-row">
+            <span class="recon-metric-label">Penjualan via Cash:</span>
+            <span id="recon-sys-cash" class="recon-metric-value" style="color: var(--accent-cash);">Rp 0</span>
+          </div>
+          <div class="recon-metric-row">
+            <span class="recon-metric-label">Penjualan via QRIS (Otomatis):</span>
+            <span id="recon-sys-qris" class="recon-metric-value" style="color: var(--accent-qris);">Rp 0</span>
+          </div>
+          <div class="recon-metric-row">
+            <span class="recon-metric-label">Target Cash di Tangan (Cash + Modal):</span>
+            <span id="recon-sys-target-cash" class="recon-metric-value">Rp 150.000</span>
+          </div>
+        </div>
+
+        <!-- CARD 3: Input QRIS Riil & Crosscheck -->
+        <div class="recon-card">
+          <div class="recon-card-header">
+            <h3 class="recon-card-title">📱 3. Verifikasi QRIS Masuk</h3>
+            <div id="recon-qris-status-badge" class="status-badge balanced">
+              ✅ Cocok
+            </div>
+          </div>
+          <p style="font-size: 0.82rem; color: var(--text-muted);">
+            Buka mutasi rekening bank / aplikasi QRIS (BCA/Mandiri/Nobu) dan masukkan total uang QRIS yang masuk hari ini.
+          </p>
+          <div class="recon-input-group">
+            <label for="input-recon-qris-real">Total Mutasi QRIS Riil (Rp):</label>
+            <input type="number" id="input-recon-qris-real" class="recon-input-field" placeholder="0" step="1000">
+          </div>
+          <div class="recon-metric-row">
+            <span class="recon-metric-label">QRIS Otomatis Sistem:</span>
+            <span id="recon-qris-sys-compare" class="recon-metric-value">Rp 0</span>
+          </div>
+          <div class="recon-metric-row">
+            <span class="recon-metric-label">Selisih QRIS:</span>
+            <span id="recon-qris-diff-val" class="recon-metric-value">Rp 0</span>
+          </div>
+        </div>
+
+        <!-- CARD 4: Input Uang Cash Fisik di Tangan -->
+        <div class="recon-card">
+          <div class="recon-card-header">
+            <h3 class="recon-card-title">👛 4. Verifikasi Cash Fisik</h3>
+            <div id="recon-cash-status-badge" class="status-badge balanced">
+              ✅ Cocok
+            </div>
+          </div>
+          <p style="font-size: 0.82rem; color: var(--text-muted);">
+            Hitung semua uang tunai fisik yang ada di kaleng / dompet kasir (termasuk modal awal 150k).
+          </p>
+          <div class="recon-input-group">
+            <label for="input-recon-cash-real">Total Uang Cash Fisik di Pegang (Rp):</label>
+            <input type="number" id="input-recon-cash-real" class="recon-input-field" placeholder="0" step="1000">
+          </div>
+          <div class="recon-metric-row">
+            <span class="recon-metric-label">Target Fisik (Cash + Modal):</span>
+            <span id="recon-cash-sys-target" class="recon-metric-value">Rp 150.000</span>
+          </div>
+          <div class="recon-metric-row">
+            <span class="recon-metric-label">Selisih Cash:</span>
+            <span id="recon-cash-diff-val" class="recon-metric-value">Rp 0</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Notes & Closing Info -->
+      <div class="recon-card" style="margin-bottom: 1.5rem;">
+        <h3 class="recon-card-title">📝 Catatan Kasir / Evaluasi Penjualan</h3>
+        <p style="font-size: 0.82rem; color: var(--text-muted);">
+          Tuliskan catatan bila ada produk rusak, sisa kue yang dibagikan, pembeli kurang bayar, atau info lainnya.
+        </p>
+        <textarea id="input-recon-notes" rows="3" class="recon-input-field" style="font-size: 0.9rem; font-weight: normal;" placeholder="Contoh: 1 pastel terjatuh, kembalian pas, donat habis disukai umat..."></textarea>
+      </div>
+
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 3: KELOLA TEMPLATE BARANG -->
+    <!-- ========================================== -->
+    <section id="tab-templates" class="tab-panel">
+      <div class="toolbar-card">
+        <div class="toolbar-top-row">
+          <div>
+            <h3 style="font-size: 1.05rem; font-weight: 700;">Template Daftar Barang Standar</h3>
+            <p style="font-size: 0.82rem; color: var(--text-muted);">
+              Daftar menu & harga default ini otomatis dimuat setiap kali Anda memulai sesi jualan baru.
+            </p>
+          </div>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button id="btn-add-template-item" class="btn btn-primary btn-sm">
+              ➕ Tambah Item Template
+            </button>
+            <button id="btn-reset-default-templates" class="btn btn-outline btn-sm" title="Kembalikan ke menu bawaan OMK YGP">
+              🔄 Reset Menu Bawaan
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-responsive-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>No</th>
+              <th>Nama Barang</th>
+              <th>Kategori</th>
+              <th>Harga Jual (Rp)</th>
+              <th>Estimasi Stok Bawaan</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="template-table-body">
+            <!-- Rendered via JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 4: RIWAYAT SESI JUALAN -->
+    <!-- ========================================== -->
+    <section id="tab-history" class="tab-panel">
+      <div class="toolbar-card">
+        <div class="toolbar-top-row">
+          <div>
+            <h3 style="font-size: 1.05rem; font-weight: 700;">Arsip & Riwayat Penjualan</h3>
+            <p style="font-size: 0.82rem; color: var(--text-muted);">
+              Riwayat pembukuan sesi jualan minggu-minggu sebelumnya yang telah diarsipkan.
+            </p>
+          </div>
+          <button id="btn-export-backup-json" class="btn btn-outline btn-sm">
+            💾 Unduh Cadangan (JSON)
+          </button>
+        </div>
+      </div>
+
+      <div id="history-list-container">
+        <!-- Rendered via JS -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- App Footer -->
+  <footer class="app-footer">
+    <p><strong>Kantin OMK Paroki St. Yohanes Gabriel Perboyre (YGP)</strong></p>
+    <p>Pelayanan Orang Muda Katolik • Semua data tersimpan aman secara otomatis di browser perangkat Anda.</p>
+  </footer>
+
+  <!-- ========================================== -->
+  <!-- MODAL: INFO SESI (Tanggal, Misa, Petugas, Modal) -->
+  <!-- ========================================== -->
+  <div id="modal-session-meta" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>⚙️ Pengaturan Sesi & Petugas</h3>
+        <button class="btn btn-outline btn-sm modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="recon-input-group">
+          <label for="meta-input-date">Tanggal Penjualan:</label>
+          <input type="date" id="meta-input-date" class="recon-input-field" style="font-size: 0.95rem;">
+        </div>
+        <div class="recon-input-group">
+          <label for="meta-input-shift">Nama Sesi / Jadwal Misa:</label>
+          <input type="text" id="meta-input-shift" class="recon-input-field" style="font-size: 0.95rem;" placeholder="Misa Pagi (06.00 & 08.00)">
+        </div>
+        <div class="recon-input-group">
+          <label for="meta-input-pic">Nama Petugas Bertugas:</label>
+          <input type="text" id="meta-input-pic" class="recon-input-field" style="font-size: 0.95rem;" placeholder="Contoh: Bayu & Tim OMK Seksi Dana">
+        </div>
+        <div class="recon-input-group">
+          <label for="meta-input-initial-cash">Modal Awal Kembalian (Rp):</label>
+          <input type="number" id="meta-input-initial-cash" class="recon-input-field" value="150000" step="5000">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline modal-close">Batal</button>
+        <button id="btn-save-session-meta" class="btn btn-primary">Simpan Info Sesi</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL: TAMBAH BARANG KE SESI AKTIF -->
+  <!-- ========================================== -->
+  <div id="modal-add-item" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>➕ Tambah Barang ke Sesi Ini</h3>
+        <button class="btn btn-outline btn-sm modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="recon-input-group">
+          <label for="new-item-name">Nama Barang / Makanan:</label>
+          <input type="text" id="new-item-name" class="recon-input-field" placeholder="Contoh: Tahu Isi Pedas">
+        </div>
+        <div class="recon-input-group">
+          <label for="new-item-category">Kategori:</label>
+          <select id="new-item-category" class="recon-input-field" style="font-size: 0.95rem;">
+            <option value="Makanan Gurih">Makanan Gurih</option>
+            <option value="Makanan Manis">Makanan Manis</option>
+            <option value="Minuman Dingin">Minuman Dingin</option>
+            <option value="Minuman Spesial">Minuman Spesial</option>
+            <option value="Snack Kering">Snack Kering</option>
+            <option value="Lainnya">Lainnya</option>
+          </select>
+        </div>
+        <div class="recon-input-group">
+          <label for="new-item-price">Harga Satuan (Rp):</label>
+          <input type="number" id="new-item-price" class="recon-input-field" placeholder="4000" step="500">
+        </div>
+        <div class="recon-input-group">
+          <label for="new-item-stock">Stok Awal yang Dibawa:</label>
+          <input type="number" id="new-item-stock" class="recon-input-field" placeholder="20" min="0">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline modal-close">Batal</button>
+        <button id="btn-confirm-add-item" class="btn btn-primary">Tambahkan ke Kasir</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL: PREVIEW LAPORAN WHATSAPP -->
+  <!-- ========================================== -->
+  <div id="modal-whatsapp-preview" class="modal-overlay">
+    <div class="modal-box" style="max-width: 600px;">
+      <div class="modal-header">
+        <h3>📲 Format Laporan WhatsApp</h3>
+        <button class="btn btn-outline btn-sm modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.85rem; color: var(--text-muted);">
+          Teks di bawah siap dikirim ke grup WhatsApp pengurus / panitia OMK YGP:
+        </p>
+        <textarea id="whatsapp-preview-text" rows="14" class="recon-input-field" style="font-family: monospace; font-size: 0.85rem; background: var(--bg-card-subtle); line-height: 1.4;" readonly></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline modal-close">Tutup</button>
+        <button id="btn-copy-wa-modal" class="btn btn-whatsapp">
+          📋 Salin ke Clipboard
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL: BAGIKAN / TRANSFER SESI KE TIM -->
+  <!-- ========================================== -->
+  <div id="modal-share-session" class="modal-overlay">
+    <div class="modal-box" style="max-width: 580px;">
+      <div class="modal-header">
+        <h3>🔗 Bagikan Sesi Jualan ke Rekan Tim</h3>
+        <button class="btn btn-outline btn-sm modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.85rem; color: var(--text-muted);">
+          Gunakan fitur ini untuk mentransfer pembukuan saat <strong>pergantian shift petugas</strong> atau membagikan ke HP rekan panitia lain.
+        </p>
+
+        <!-- Bagian 1: Bagikan Link -->
+        <div style="background: var(--bg-card-subtle); padding: 0.85rem; border-radius: var(--radius-md); border: 1px solid var(--border-light); display: flex; flex-direction: column; gap: 0.5rem;">
+          <label style="font-size: 0.82rem; font-weight: 700;">1. Salin Link Sesi untuk Teman:</label>
+          <input type="text" id="share-link-input" class="recon-input-field" style="font-size: 0.8rem; font-family: monospace;" readonly>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button id="btn-copy-share-link" class="btn btn-primary btn-sm">
+              📋 Salin Link
+            </button>
+            <button id="btn-wa-share-link" class="btn btn-whatsapp btn-sm">
+              📲 Kirim via WhatsApp
+            </button>
+          </div>
+          <span style="font-size: 0.75rem; color: var(--text-muted);">
+            💡 Teman yang membuka link ini di HP mereka akan langsung memuat data sesi kasir Anda!
+          </span>
+        </div>
+
+        <!-- Bagian 2: Impor dari Kode / Link -->
+        <div style="margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.4rem;">
+          <label style="font-size: 0.82rem; font-weight: 700;">2. Atau Masukkan Link / Kode Sesi dari Rekan:</label>
+          <textarea id="import-code-input" rows="3" class="recon-input-field" style="font-size: 0.8rem; font-family: monospace;" placeholder="Tempel / Paste link atau kode sesi yang dikirim teman di sini..."></textarea>
+          <button id="btn-confirm-import-code" class="btn btn-outline btn-sm" style="align-self: flex-start;">
+            📥 Muat Data Sesi Ini
+          </button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline modal-close">Selesai</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Main Application Logic Scripts -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

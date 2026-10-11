@@ -1,0 +1,22 @@
+{
+  "name": "Kantin OMK Paroki YGP",
+  "short_name": "Kantin YGP",
+  "description": "Aplikasi Kasir & Pendataan Penjualan Kantin OMK Paroki St. Yohanes Gabriel Perboyre",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d9488",
+  "theme_color": "#0d9488",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/assets/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/assets/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "name": "kantin-omk-ygp",
+  "version": "1.0.0",
+  "description": "Sistem Digitalisasi Pencatatan Penjualan Kantin OMK Paroki St. Yohanes Gabriel Perboyre (YGP)",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "kantin",
+    "omk",
+    "ygp",
+    "kasir",
+    "pos",
+    "pencatatan-penjualan"
+  ],
+  "author": "OMK YGP",
+  "license": "MIT"
+}
