@@ -112,25 +112,57 @@ Agar aplikasi dapat digunakan dengan lancar oleh seluruh tim:
 
 ---
 
-## 📱 Panduan Alur Kerja Petugas Kantin Hari Minggu
+## 👥 Alur Kerja 2 Tahap (H-1 Persiapan & Hari-H Kasir)
 
-1. **Persiapan (Sebelum Buka):**
-   - Buka menu **Penjualan & Kasir**.
-   - Periksa dan sesuaikan **Stok Awal** barang yang dibawa.
-   - Centang checkbox pada barang saat menata di etalase/meja stan.
-   - Pastikan modal awal kembalian Rp 150.000 sudah siap di kaleng kasir.
+Aplikasi telah dirancang memisahkan 2 tanggung jawab agar tidak saling tumpang tindih:
 
-2. **Saat Pelayanan (Misa Selesai):**
-   - Bila ada pembeli membayar tunai: Tap tombol **`+ Tunai (Cash)`**.
-   - Bila pembeli scan QRIS: Tap tombol **`+ QRIS`**.
-   - Sisa stok dan omzet langsung ter-update otomatis di bagian atas layar.
+### 📦 Tahap 1: Persiapan Menu & Stok Awal (H-1 / Sebelum Misa)
+* **Petugas:** Tim Logistik / Konsumsi OMK (yang belanja atau menerima kue titipan).
+* **Langkah:**
+  1. Buka tab **`📦 1. Persiapan (H-1)`**.
+  2. Tentukan Tanggal Misa, nama yang menyiapkan, dan pastikan modal awal (Rp 150.000).
+  3. Masukkan jumlah **Stok Awal yang Disiapkan** untuk tiap kue/minuman.
+  4. Klik **`💾 Simpan Persiapan ke Cloud (Siap untuk Hari-H)`**.
+  5. Selesai! Data stok awal otomatis tersimpan aman di Cloud Firestore.
 
-3. **Penutupan (Setelah Stan Selesai):**
-   - Masuk ke tab **📊 Tutup Kasir & Rekonsiliasi**.
-   - Masukkan total mutasi QRIS yang masuk dari m-banking di kolom **3. Verifikasi QRIS Masuk**.
-   - Hitung seluruh uang kertas & koin di kaleng kasir, masukkan di kolom **4. Verifikasi Cash Fisik**.
-   - Periksa badge status: pastikan keduanya bertuliskan `✅ Cocok`.
-   - Periksa **Total Pendapatan Bersih Kantin OMK** yang dihasilkan rumus `Cash + QRIS - Modal`.
-   - Tap **📲 Salin Laporan WhatsApp** lalu *paste* ke grup WhatsApp OMK YGP.
-   - Tap **💾 Simpan & Arsipkan Sesi** untuk mengarsipkan pembukuan hari ini.
+### 🛍️ Tahap 2: Operasional Kasir & Penjualan (Hari-H Saat Misa)
+* **Petugas:** Rekan-rekan OMK yang bertugas jaga stand kantin di gereja.
+* **Langkah:**
+  1. Buka tab **`🛍️ 2. Kasir (Hari-H)`** di HP masing-masing.
+  2. Muncul banner: *"Stok Awal Telah Disiapkan oleh Tim Logistik"*.
+  3. Saat menata kue di meja stand, petugas tinggal mencentang kotak verifikasi fisik.
+  4. Saat melayani pembeli, cukup tap tombol cepat **`[💵 + Tunai (Cash)]`** atau **`[📱 + QRIS]`**.
+  5. Data penjualan dan sisa stok tersinkronisasi otomatis secara realtime antar-HP!
+
+### 📊 Tahap 3: Tutup Kasir & Rekonsiliasi
+1. Masuk ke tab **`📊 3. Tutup & Rekonsiliasi`**.
+2. Masukkan mutasi QRIS riil dari m-banking dan hitung uang tunai di kaleng kasir.
+3. Evaluasi selisih (pastikan status bertuliskan `✅ Cocok`).
+4. Dapatkan **Total Pendapatan Bersih** sesuai rumus: `Cash + QRIS - Modal Awal Rp 150.000`.
+5. Tap **`📲 Salin Laporan WhatsApp`** dan kirim ke grup WA pengurus OMK.
+
+---
+
+## 🔥 Cara Menghubungkan Firebase Firestore (100% Gratis Google)
+
+Agar seluruh HP petugas otomatis tersinkronisasi secara realtime tanpa kirim-kirim link manual:
+
+1. Buka [console.firebase.google.com](https://console.firebase.google.com) dan login dengan akun Google Anda.
+2. Klik **"Add Project"** (Beri nama misal: `kantin-omk-ygp`).
+3. Pada menu sebelah kiri, pilih **Build** ➔ **Firestore Database** ➔ Klik **Create Database** (Pilih mode **Test mode** agar langsung bisa dibaca/tulis).
+4. Di halaman Project Overview, klik ikon Web **`</>`** untuk membuat web app.
+5. Salin objek `firebaseConfig` yang muncul. Contohnya:
+   ```javascript
+   {
+     apiKey: "AIzaSy...",
+     authDomain: "kantin-omk-ygp.firebaseapp.com",
+     projectId: "kantin-omk-ygp",
+     storageBucket: "kantin-omk-ygp.firebasestorage.app",
+     messagingSenderId: "123456789",
+     appId: "1:123456789:web:abcdef"
+   }
+   ```
+6. Buka web aplikasi Kantin OMK YGP di browser Anda, klik tombol **`Mode Lokal (Hubungkan)`** di pojok kanan atas, lalu tempel kode tersebut dan klik **"Simpan & Sambungkan Firebase"**.
+7. Status akan berubah menjadi **`🟢 Cloud Terhubung 🔥`** dan semua HP tim akan otomatis tersinkronisasi realtime!
+
 
