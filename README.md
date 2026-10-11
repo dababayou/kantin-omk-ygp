@@ -1,7 +1,7 @@
 # Kantin OMK Paroki St. Yohanes Gabriel Perboyre (YGP)
 ### Sistem Digitalisasi Pencatatan Penjualan & Kasir Rekonsiliasi
 
-Aplikasi web modern, responsif (mobile-first), dan ringan untuk menggantikan sistem pencatatan kertas manual pada stan Kantin Orang Muda Katolik (OMK) Paroki Santo Yohanes Gabriel Perboyre (YGP).
+Aplikasi web modern, responsif (mobile-first), dan ringan untuk menggantikan sistem pencatatan kertas manual pada stan Kantin Orang Muda Katolik (OMK) Paroki Santo Yohanes Gabriel Perboyre (YGP)
 
 ---
 
