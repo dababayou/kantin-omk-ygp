@@ -12,6 +12,7 @@ import {
   calculateSessionSummary
 } from './calculations.js';
 import { generateWhatsAppReport } from './whatsapp.js';
+import { saveFirebaseConfig, loadSavedFirebaseConfig, isConfigured } from './firebaseConfig.js';
 
 // DOM Element References
 const elements = {
@@ -25,6 +26,14 @@ const elements = {
   btnNewSession: document.getElementById('btn-new-session'),
   btnQuickWa: document.getElementById('btn-quick-wa'),
 
+  // Cloud Firebase Status & Modal
+  btnCloudStatus: document.getElementById('btn-cloud-status'),
+  cloudStatusText: document.getElementById('cloud-status-text'),
+  modalFirebaseConfig: document.getElementById('modal-firebase-config'),
+  fbConfigJson: document.getElementById('fb-config-json'),
+  fbModalStatusBadge: document.getElementById('fb-modal-status-badge'),
+  btnSaveFirebaseConfig: document.getElementById('btn-save-firebase-config'),
+
   // Sticky KPI Bar
   kpiExpectedRevenue: document.getElementById('kpi-expected-revenue'),
   kpiExpectedCash: document.getElementById('kpi-expected-cash'),
@@ -36,7 +45,23 @@ const elements = {
   tabButtons: document.querySelectorAll('.tab-btn'),
   tabPanels: document.querySelectorAll('.tab-panel'),
 
-  // Tab 1: Cashier View
+  // Tab 1: Persiapan (H-1)
+  prepStageBadge: document.getElementById('prep-stage-badge'),
+  prepInputDate: document.getElementById('prep-input-date'),
+  prepInputShift: document.getElementById('prep-input-shift'),
+  prepInputPic: document.getElementById('prep-input-pic'),
+  prepInputInitialCash: document.getElementById('prep-input-initial-cash'),
+  prepTableBody: document.getElementById('prep-table-body'),
+  btnPrepAddItem: document.getElementById('btn-prep-add-item'),
+  prepTotalUnits: document.getElementById('prep-total-units'),
+  prepTotalValue: document.getElementById('prep-total-value'),
+  btnSavePrepCloud: document.getElementById('btn-save-prep-cloud'),
+  btnGoToCashier: document.getElementById('btn-go-to-cashier'),
+
+  // Tab 2: Cashier View (Hari-H)
+  bannerPrepStatus: document.getElementById('banner-prep-status'),
+  bannerPrepInfo: document.getElementById('banner-prep-info'),
+  btnViewPrepDetails: document.getElementById('btn-view-prep-details'),
   searchInput: document.getElementById('search-input'),
   categoryPills: document.getElementById('category-pills'),
   viewModeCardsBtn: document.getElementById('view-mode-cards'),
@@ -49,7 +74,7 @@ const elements = {
   btnCheckAllInitial: document.getElementById('btn-check-all-initial'),
   btnSyncRemaining: document.getElementById('btn-sync-remaining'),
 
-  // Tab 2: Closing & Reconciliation
+  // Tab 3: Closing & Reconciliation
   heroFinalProfit: document.getElementById('hero-final-profit'),
   btnCopyWaClosing: document.getElementById('btn-copy-wa-closing'),
   btnSaveSessionArchive: document.getElementById('btn-save-session-archive'),
@@ -69,12 +94,12 @@ const elements = {
   reconCashDiffVal: document.getElementById('recon-cash-diff-val'),
   inputReconNotes: document.getElementById('input-recon-notes'),
 
-  // Tab 3: Templates
+  // Tab 4: Templates
   btnAddTemplateItem: document.getElementById('btn-add-template-item'),
   btnResetDefaultTemplates: document.getElementById('btn-reset-default-templates'),
   templateTableBody: document.getElementById('template-table-body'),
 
-  // Tab 4: History
+  // Tab 5: History
   btnExportBackupJson: document.getElementById('btn-export-backup-json'),
   historyListContainer: document.getElementById('history-list-container'),
 
@@ -188,10 +213,31 @@ elements.viewModeTableBtn.addEventListener('click', () => setViewMode('table'));
 // RENDER META & LIVE KPIS
 // ==========================================================================
 function renderMetaAndKpi(state) {
-  const { currentSession } = state;
+  const { currentSession, cloudStatus } = state;
   if (!currentSession) return;
 
   const summary = calculateSessionSummary(currentSession);
+
+  // Cloud Status Indicator
+  const currentCloud = cloudStatus || 'offline';
+  elements.btnCloudStatus.className = `cloud-status-chip ${currentCloud}`;
+  if (currentCloud === 'connected') {
+    elements.cloudStatusText.textContent = 'Cloud Terhubung 🔥';
+  } else if (currentCloud === 'saving') {
+    elements.cloudStatusText.textContent = 'Menyimpan...';
+  } else if (currentCloud === 'error') {
+    elements.cloudStatusText.textContent = 'Gagal Sinkron ⚠️';
+  } else {
+    elements.cloudStatusText.textContent = 'Mode Lokal (Hubungkan)';
+  }
+
+  // Banner status persiapan di Tab Hari-H
+  if (currentSession.stage === 'prepared') {
+    elements.bannerPrepStatus.style.display = 'flex';
+    elements.bannerPrepInfo.textContent = `Disiapkan oleh ${currentSession.preparedBy || 'Tim Logistik'} (${summary.totalInitialStock} unit stok siap diperiksa)`;
+  } else {
+    elements.bannerPrepStatus.style.display = 'none';
+  }
 
   // Meta Bar
   if (currentSession.date) {
@@ -219,6 +265,89 @@ function renderMetaAndKpi(state) {
   if (summary.isAllInitialChecked) {
     elements.checklistInitialProgress.innerHTML = `<span style="color: var(--accent-cash); font-weight: 700;">Semua ${summary.totalItemsCount} barang siap diperiksa! ✅</span>`;
   }
+}
+
+// ==========================================================================
+// RENDER TAHAP 1: PERSIAPAN H-1
+// ==========================================================================
+function renderPrepView(state) {
+  const { currentSession } = state;
+  if (!currentSession) return;
+
+  if (document.activeElement !== elements.prepInputDate) {
+    elements.prepInputDate.value = currentSession.date || '';
+  }
+  if (document.activeElement !== elements.prepInputShift) {
+    elements.prepInputShift.value = currentSession.shiftName || 'Misa Minggu';
+  }
+  if (document.activeElement !== elements.prepInputPic) {
+    elements.prepInputPic.value = currentSession.preparedBy || 'Tim Logistik OMK';
+  }
+  if (document.activeElement !== elements.prepInputInitialCash) {
+    elements.prepInputInitialCash.value = currentSession.initialCash !== undefined ? currentSession.initialCash : 150000;
+  }
+
+  // Stage badge
+  if (currentSession.stage === 'prepared') {
+    elements.prepStageBadge.style.background = 'var(--accent-cash-bg)';
+    elements.prepStageBadge.style.color = 'var(--accent-cash)';
+    elements.prepStageBadge.textContent = '✅ Siap untuk Hari-H';
+  } else if (currentSession.stage === 'live') {
+    elements.prepStageBadge.style.background = 'var(--primary-light)';
+    elements.prepStageBadge.style.color = 'var(--primary)';
+    elements.prepStageBadge.textContent = '🚀 Sedang Digunakan (Hari-H)';
+  } else {
+    elements.prepStageBadge.style.background = 'var(--accent-warn-bg)';
+    elements.prepStageBadge.style.color = 'var(--accent-warn)';
+    elements.prepStageBadge.textContent = 'Draft Persiapan H-1';
+  }
+
+  // Render Table Items
+  const items = currentSession.items || [];
+  elements.prepTableBody.innerHTML = '';
+
+  let totalPrepUnits = 0;
+  let totalPrepValue = 0;
+
+  items.forEach((item, index) => {
+    const stock = Number(item.initialStock) || 0;
+    const price = Number(item.price) || 0;
+    const estValue = stock * price;
+
+    totalPrepUnits += stock;
+    totalPrepValue += estValue;
+
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td style="color: var(--text-muted); font-size: 0.75rem;">${index + 1}</td>
+      <td>
+        <strong>${item.name}</strong>
+      </td>
+      <td><span class="item-category-tag">${item.category || 'Snack'}</span></td>
+      <td><strong>${formatRupiah(price)}</strong></td>
+      <td>
+        <input type="number" class="table-input-number inp-prep-stock" data-id="${item.id}" 
+               value="${stock}" min="0" style="width: 70px; font-weight: 700; color: var(--primary);">
+      </td>
+      <td style="font-weight: 600;">${formatRupiah(estValue)}</td>
+      <td>
+        <button class="btn btn-outline btn-sm btn-delete-item" data-id="${item.id}" style="color: var(--accent-danger);" title="Hapus dari sesi">
+          🗑️
+        </button>
+      </td>
+    `;
+    elements.prepTableBody.appendChild(row);
+  });
+
+  elements.prepTotalUnits.textContent = `${totalPrepUnits} pcs`;
+  elements.prepTotalValue.textContent = formatRupiah(totalPrepValue);
+
+  // Attach prep stock input listeners
+  document.querySelectorAll('.inp-prep-stock').forEach(inp => {
+    inp.onchange = () => {
+      store.setInitialStock(inp.dataset.id, inp.value);
+    };
+  });
 }
 
 // ==========================================================================
@@ -990,10 +1119,106 @@ function checkIncomingShareHash() {
 }
 
 // ==========================================================================
+// TAHAP 1: PERSIAPAN H-1 LISTENERS
+// ==========================================================================
+elements.prepInputDate.addEventListener('input', (e) => {
+  store.updateSessionMeta({ date: e.target.value });
+});
+elements.prepInputShift.addEventListener('input', (e) => {
+  store.updateSessionMeta({ shiftName: e.target.value });
+});
+elements.prepInputPic.addEventListener('input', (e) => {
+  store.updateSessionMeta({ preparedBy: e.target.value });
+});
+elements.prepInputInitialCash.addEventListener('input', (e) => {
+  store.updateSessionMeta({ initialCash: parseNumber(e.target.value) });
+});
+
+elements.btnPrepAddItem.addEventListener('click', () => {
+  elements.btnAddItemModal.click();
+});
+
+elements.btnSavePrepCloud.addEventListener('click', async () => {
+  await store.savePreparationH1({
+    date: elements.prepInputDate.value,
+    shiftName: elements.prepInputShift.value,
+    preparedBy: elements.prepInputPic.value,
+    initialCash: parseNumber(elements.prepInputInitialCash.value)
+  });
+  showToast('Persiapan stok disimpan ke Cloud! Siap untuk Hari-H! 📦🔥');
+});
+
+elements.btnGoToCashier.addEventListener('click', () => {
+  store.activateHariH();
+  switchTab('cashier');
+  showToast('Mode Kasir Hari-H Aktif! Selamat melayani! ✨');
+});
+
+elements.btnViewPrepDetails.addEventListener('click', () => {
+  switchTab('prep');
+});
+
+// ==========================================================================
+// FIREBASE CLOUD CONFIG MODAL LISTENERS
+// ==========================================================================
+elements.btnCloudStatus.addEventListener('click', () => {
+  const currentCfg = loadSavedFirebaseConfig();
+  if (currentCfg && currentCfg.apiKey) {
+    elements.fbConfigJson.value = JSON.stringify(currentCfg, null, 2);
+  } else {
+    elements.fbConfigJson.value = '';
+  }
+  const isReady = isConfigured;
+  elements.fbModalStatusBadge.textContent = isReady ? '🟢 Terhubung ke Firebase' : '🟡 Belum Terhubung';
+  elements.fbModalStatusBadge.style.color = isReady ? 'var(--accent-cash)' : 'var(--accent-warn)';
+  elements.fbModalStatusBadge.style.background = isReady ? 'var(--accent-cash-bg)' : 'var(--accent-warn-bg)';
+  elements.modalFirebaseConfig.classList.add('open');
+});
+
+elements.btnSaveFirebaseConfig.addEventListener('click', () => {
+  const raw = elements.fbConfigJson.value.trim();
+  if (!raw) {
+    alert('Silakan tempel kode konfigurasi Firebase terlebih dahulu.');
+    return;
+  }
+  let parsedConfig = null;
+  try {
+    let cleanJson = raw;
+    if (cleanJson.includes('{') && cleanJson.includes('}')) {
+      cleanJson = cleanJson.substring(cleanJson.indexOf('{'), cleanJson.lastIndexOf('}') + 1);
+    }
+    parsedConfig = JSON.parse(cleanJson);
+  } catch (err) {
+    try {
+      const fn = new Function(`return (${raw.replace(/^(const|var|let)\s+\w+\s*=\s*/, '')})`);
+      parsedConfig = fn();
+    } catch (e2) {
+      alert('Format konfigurasi tidak valid. Pastikan format JSON dari Firebase Console benar.');
+      return;
+    }
+  }
+
+  if (!parsedConfig || !parsedConfig.apiKey || !parsedConfig.projectId) {
+    alert('Konfigurasi harus menyertakan "apiKey" dan "projectId".');
+    return;
+  }
+
+  const result = saveFirebaseConfig(parsedConfig);
+  if (result.success) {
+    store.initCloudSync();
+    elements.modalFirebaseConfig.classList.remove('open');
+    showToast('Firebase berhasil terhubung! Sinkronisasi cloud aktif! 🔥');
+  } else {
+    alert('Gagal menghubungkan Firebase: ' + (result.reason || 'Periksa kembali konfigurasi Anda.'));
+  }
+});
+
+// ==========================================================================
 // STORE SUBSCRIPTION & APP BOOTSTRAP
 // ==========================================================================
 function renderApp(state) {
   renderMetaAndKpi(state);
+  renderPrepView(state);
   renderItems();
   renderReconciliation(state);
   renderTemplates(state);
@@ -1011,4 +1236,5 @@ setViewMode(initialState.uiSettings.viewMode || 'cards');
 switchTab(initialState.uiSettings.activeTab || 'cashier');
 renderApp(initialState);
 checkIncomingShareHash();
+
 

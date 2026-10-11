@@ -28,6 +28,11 @@
         </div>
       </div>
       <div class="header-actions">
+        <!-- Status Cloud Firebase -->
+        <button id="btn-cloud-status" class="cloud-status-chip offline" title="Status Sinkronisasi Cloud Firebase (Klik untuk Pengaturan)">
+          <span class="dot"></span>
+          <span id="cloud-status-text">Mode Lokal</span>
+        </button>
         <button id="btn-share-session" class="btn btn-primary btn-sm" title="Bagikan / Transfer Sesi ke Rekan Tim">
           🔗 <span class="hide-mobile">Bagikan ke Tim</span>
         </button>
@@ -95,13 +100,16 @@
     </div>
   </section>
 
-  <!-- Navigation Tabs -->
+  <!-- Navigation Tabs (Alur 2 Tahap: H-1 Persiapan & Hari-H Kasir) -->
   <nav class="nav-tabs" aria-label="Menu Utama">
+    <button class="tab-btn" data-tab="prep">
+      📦 1. Persiapan (H-1)
+    </button>
     <button class="tab-btn active" data-tab="cashier">
-      🛍️ Penjualan & Kasir
+      🛍️ 2. Kasir (Hari-H)
     </button>
     <button class="tab-btn" data-tab="closing">
-      📊 Tutup Kasir & Rekonsiliasi
+      📊 3. Tutup & Rekonsiliasi
     </button>
     <button class="tab-btn" data-tab="templates">
       ⚙️ Template Barang
@@ -115,9 +123,116 @@
   <main class="app-main">
 
     <!-- ========================================== -->
-    <!-- TAB 1: PENJUALAN & KASIR -->
+    <!-- TAB 1: PERSIAPAN STOK (H-1) -->
+    <!-- ========================================== -->
+    <section id="tab-prep" class="tab-panel">
+      <div class="prep-container">
+        
+        <!-- Hero Penjelasan H-1 -->
+        <div class="prep-hero-card">
+          <div class="prep-header-row">
+            <div>
+              <h2 style="font-size: 1.15rem; font-weight: 700; color: var(--text-main);">
+                📦 Tahap 1: Persiapan Menu & Stok Awal (H-1)
+              </h2>
+              <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.2rem;">
+                Digunakan oleh tim logistik/konsumsi sebelum Hari-H untuk mencatat kue & minuman yang dibeli atau diterima dari vendor. Data akan otomatis tersimpan di Cloud Firebase agar siap digunakan petugas jaga stand di Hari-H.
+              </p>
+            </div>
+            <span id="prep-stage-badge" class="meta-chip" style="background: var(--primary-light); color: var(--primary); font-weight: 700;">
+              Draft Persiapan
+            </span>
+          </div>
+
+          <!-- Form Info Sesi H-1 -->
+          <div class="prep-meta-grid">
+            <div class="recon-input-group">
+              <label for="prep-input-date">📅 Tanggal Jualan (Hari-H):</label>
+              <input type="date" id="prep-input-date" class="recon-input-field" style="font-size: 0.9rem;">
+            </div>
+            <div class="recon-input-group">
+              <label for="prep-input-shift">⏰ Jadwal Misa:</label>
+              <input type="text" id="prep-input-shift" class="recon-input-field" style="font-size: 0.9rem;" placeholder="Misa Pagi (06.00 & 08.00)">
+            </div>
+            <div class="recon-input-group">
+              <label for="prep-input-pic">👤 Penyiap (Logistik / Konsumsi):</label>
+              <input type="text" id="prep-input-pic" class="recon-input-field" style="font-size: 0.9rem;" placeholder="Tim Logistik OMK">
+            </div>
+            <div class="recon-input-group">
+              <label for="prep-input-initial-cash">💵 Modal Kembalian Disiapkan (Rp):</label>
+              <input type="number" id="prep-input-initial-cash" class="recon-input-field" style="font-size: 0.9rem;" value="150000" step="5000">
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabel Pengisian Stok Awal -->
+        <div class="prep-items-card">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+            <div>
+              <h3 style="font-size: 1.05rem; font-weight: 700;">Daftar Stok yang Dibawa / Masuk:</h3>
+              <p style="font-size: 0.8rem; color: var(--text-muted);">
+                Masukkan jumlah unit kue/minuman yang disiapkan untuk dijual besok.
+              </p>
+            </div>
+            <button id="btn-prep-add-item" class="btn btn-primary btn-sm">
+              ➕ Tambah Menu Dadakan
+            </button>
+          </div>
+
+          <div class="table-responsive-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Nama Barang</th>
+                  <th>Kategori</th>
+                  <th>Harga Satuan (Rp)</th>
+                  <th style="color: var(--primary);">Stok Awal Disiapkan (pcs)</th>
+                  <th>Perkiraan Nilai Jual</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="prep-table-body">
+                <!-- Rendered via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Action Footer -->
+        <div class="prep-action-bar">
+          <div>
+            <div style="font-size: 0.85rem; color: var(--text-muted);">Total Stok Disiapkan: <strong id="prep-total-units">0 pcs</strong></div>
+            <div style="font-size: 0.85rem; color: var(--text-muted);">Estimasi Nilai Omzet: <strong id="prep-total-value" style="color: var(--primary);">Rp 0</strong></div>
+          </div>
+          <div style="display: flex; gap: 0.6rem; flex-wrap: wrap;">
+            <button id="btn-save-prep-cloud" class="btn btn-primary">
+              💾 Simpan Persiapan ke Cloud (Siap untuk Hari-H)
+            </button>
+            <button id="btn-go-to-cashier" class="btn btn-outline">
+              🛍️ Buka Kasir Hari-H ➔
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 2: OPERASIONAL KASIR (HARI-H) -->
     <!-- ========================================== -->
     <section id="tab-cashier" class="tab-panel active">
+
+      <!-- Alert Info Status Persiapan H-1 -->
+      <div id="banner-prep-status" class="hari-h-alert" style="display: none;">
+        <div>
+          <strong>📦 Stok Awal Telah Disiapkan:</strong>
+          <span id="banner-prep-info">Disiapkan oleh Tim Logistik</span>
+        </div>
+        <button id="btn-view-prep-details" class="btn btn-outline btn-sm">
+          ✏️ Edit Stok Persiapan
+        </button>
+      </div>
       
       <!-- Toolbar Filter & View Switcher -->
       <div class="toolbar-card">
@@ -542,6 +657,53 @@
       </div>
       <div class="modal-footer">
         <button class="btn btn-outline modal-close">Selesai</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL: PENGATURAN CLOUD FIREBASE -->
+  <!-- ========================================== -->
+  <div id="modal-firebase-config" class="modal-overlay">
+    <div class="modal-box" style="max-width: 600px;">
+      <div class="modal-header">
+        <h3>🔥 Hubungkan Cloud Database (Firebase)</h3>
+        <button class="btn btn-outline btn-sm modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.85rem; color: var(--text-muted);">
+          Dengan menghubungkan Firebase Firestore (gratis dari Google), seluruh HP tim OMK (H-1 dan Hari-H) akan <strong>tersinkronisasi secara otomatis dan realtime</strong>.
+        </p>
+
+        <!-- Status Card -->
+        <div style="background: var(--bg-card-subtle); padding: 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--border-light); display: flex; align-items: center; justify-content: space-between;">
+          <span style="font-size: 0.82rem; font-weight: 600;">Status Firebase Saat Ini:</span>
+          <span id="fb-modal-status-badge" class="status-badge" style="background: var(--accent-warn-bg); color: var(--accent-warn);">
+            Belum Terhubung
+          </span>
+        </div>
+
+        <!-- Pilihan 1: Tempel JSON Langsung -->
+        <div class="recon-input-group">
+          <label for="fb-config-json">📋 Tempel Langsung Kode Konfigurasi Firebase (firebaseConfig JSON):</label>
+          <textarea id="fb-config-json" rows="4" class="recon-input-field" style="font-family: monospace; font-size: 0.8rem;" placeholder='{\n  "apiKey": "AIzaSy...",\n  "authDomain": "kantin-omk.firebaseapp.com",\n  "projectId": "kantin-omk",\n  "appId": "1:..."\n}'></textarea>
+        </div>
+
+        <details style="font-size: 0.82rem; color: var(--text-muted); background: var(--bg-card-subtle); padding: 0.6rem 0.8rem; border-radius: var(--radius-sm); border: 1px solid var(--border-light);">
+          <summary style="cursor: pointer; font-weight: 600; color: var(--text-main);">ℹ️ Cara Mudah Mendapatkan Firebase Gratis (3 Menit):</summary>
+          <ol style="margin-left: 1.25rem; margin-top: 0.4rem; line-height: 1.5;">
+            <li>Buka <a href="https://console.firebase.google.com" target="_blank" style="color: var(--primary);">console.firebase.google.com</a> dan login akun Google.</li>
+            <li>Klik <strong>"Add Project"</strong> (Beri nama misal <em>Kantin OMK YGP</em>).</li>
+            <li>Pilih <strong>"Build" ➔ "Firestore Database"</strong> ➔ Klik <strong>"Create Database"</strong> (Pilih mode <em>Test Mode</em>).</li>
+            <li>Klik icon Web <strong>(&lt;/&gt;)</strong> di Project Overview untuk mendaftarkan web app, lalu salin objek <code>firebaseConfig</code> ke kotak di atas!</li>
+          </ol>
+        </details>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline modal-close">Batal</button>
+        <button id="btn-save-firebase-config" class="btn btn-primary">
+          💾 Simpan & Sambungkan Firebase
+        </button>
       </div>
     </div>
   </div>

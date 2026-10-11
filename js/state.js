@@ -1,8 +1,9 @@
 /**
- * State Management & LocalStorage Persistence untuk Kantin OMK YGP
+ * State Management & LocalStorage + Firebase Firestore Sync untuk Kantin OMK YGP
  */
 
 import { DEFAULT_TEMPLATE_ITEMS } from './templateData.js';
+import { firebaseService } from './firebaseService.js';
 
 const STORAGE_KEY_CURRENT = 'kantin_omk_ygp_current_session_v1';
 const STORAGE_KEY_TEMPLATES = 'kantin_omk_ygp_templates_v1';
@@ -12,6 +13,10 @@ const STORAGE_KEY_UI = 'kantin_omk_ygp_ui_settings_v1';
 class Store {
   constructor() {
     this.subscribers = [];
+    this.cloudStatus = firebaseService.isReady() ? 'connected' : 'offline';
+    this.cloudSaveTimer = null;
+    this.isReceivingRemoteUpdate = false;
+
     this.templates = this.loadTemplates();
     this.history = this.loadHistory();
     this.uiSettings = this.loadUiSettings();
@@ -21,6 +26,9 @@ class Store {
       this.currentSession = this.createDefaultSession();
       this.saveCurrentSession();
     }
+
+    // Mulai sinkronisasi cloud jika Firebase aktif
+    this.initCloudSync();
   }
 
   subscribe(callback) {
@@ -30,9 +38,13 @@ class Store {
     };
   }
 
-  notify() {
+  notify(shouldSyncCloud = true) {
     this.saveCurrentSession();
     this.subscribers.forEach(cb => cb(this.getState()));
+
+    if (shouldSyncCloud && !this.isReceivingRemoteUpdate) {
+      this.triggerCloudSave();
+    }
   }
 
   getState() {
@@ -40,8 +52,56 @@ class Store {
       currentSession: this.currentSession,
       templates: this.templates,
       history: this.history,
-      uiSettings: this.uiSettings
+      uiSettings: this.uiSettings,
+      cloudStatus: this.cloudStatus,
+      isFirebaseReady: firebaseService.isReady()
     };
+  }
+
+  // --- CLOUD SYNC LOGIC ---
+  initCloudSync() {
+    if (!firebaseService.isReady()) {
+      this.cloudStatus = 'offline';
+      return;
+    }
+
+    this.cloudStatus = 'connected';
+    console.log('Attaching realtime listener to Firestore...');
+
+    firebaseService.listenToActiveSession((remoteSession) => {
+      if (!remoteSession || !remoteSession.id) return;
+
+      const localUpdated = new Date(this.currentSession?.updatedAt || 0).getTime();
+      const remoteUpdated = new Date(remoteSession.updatedAt || 0).getTime();
+
+      // Jika data dari cloud lebih baru atau sesi berbeda
+      if (remoteSession.id !== this.currentSession?.id || remoteUpdated > localUpdated) {
+        console.log('Menerima update realtime dari cloud...', remoteSession.id);
+        this.isReceivingRemoteUpdate = true;
+        this.currentSession = remoteSession;
+        this.saveCurrentSession();
+        this.notify(false); // notify subscribers tanpa re-push ke cloud
+        this.isReceivingRemoteUpdate = false;
+      }
+    }, (err) => {
+      console.warn('Realtime sync status error:', err);
+      this.cloudStatus = 'error';
+      this.subscribers.forEach(cb => cb(this.getState()));
+    });
+  }
+
+  triggerCloudSave() {
+    if (!firebaseService.isReady() || !this.currentSession) return;
+
+    this.cloudStatus = 'saving';
+    this.subscribers.forEach(cb => cb(this.getState()));
+
+    clearTimeout(this.cloudSaveTimer);
+    this.cloudSaveTimer = setTimeout(async () => {
+      const ok = await firebaseService.saveSessionToCloud(this.currentSession);
+      this.cloudStatus = ok ? 'connected' : 'error';
+      this.subscribers.forEach(cb => cb(this.getState()));
+    }, 400); // Debounce 400ms agar efisien saat multi-tap tombol tally
   }
 
   // --- STORAGE HELPERS ---
@@ -92,7 +152,7 @@ class Store {
       theme: 'light',
       viewMode: 'cards', // 'cards' | 'table'
       activeCategory: 'Semua',
-      activeTab: 'cashier' // 'cashier' | 'closing' | 'templates' | 'history'
+      activeTab: 'cashier' // 'prep' | 'cashier' | 'closing' | 'templates' | 'history'
     };
   }
 
@@ -101,7 +161,7 @@ class Store {
     try {
       localStorage.setItem(STORAGE_KEY_UI, JSON.stringify(this.uiSettings));
     } catch (e) {}
-    this.notify();
+    this.notify(false);
   }
 
   loadCurrentSession() {
@@ -117,7 +177,9 @@ class Store {
   saveCurrentSession() {
     try {
       if (this.currentSession) {
-        this.currentSession.updatedAt = new Date().toISOString();
+        if (!this.isReceivingRemoteUpdate) {
+          this.currentSession.updatedAt = new Date().toISOString();
+        }
         localStorage.setItem(STORAGE_KEY_CURRENT, JSON.stringify(this.currentSession));
       }
     } catch (e) {
@@ -125,7 +187,7 @@ class Store {
     }
   }
 
-  // --- SESSION CREATION & ACTIONS ---
+  // --- SESSION CREATION & 2-PHASE WORKFLOW ---
   createDefaultSession(shiftName = 'Misa Minggu', picName = 'Tim OMK YGP') {
     const todayStr = new Date().toISOString().split('T')[0];
     const items = this.templates.map(tpl => ({
@@ -155,6 +217,9 @@ class Store {
         notes: ''
       },
       status: 'active',
+      stage: 'preparation', // 'preparation' (H-1) | 'prepared' | 'live' (Hari-H) | 'closed'
+      preparedBy: 'Tim Logistik OMK',
+      preparedAt: null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -165,6 +230,30 @@ class Store {
       this.currentSession?.shiftName || 'Misa Minggu',
       this.currentSession?.picName || 'Tim OMK YGP'
     );
+    this.notify();
+  }
+
+  // Aksi Khusus: Simpan Persiapan Stok H-1
+  async savePreparationH1(prepData) {
+    if (!this.currentSession) return;
+    this.currentSession = {
+      ...this.currentSession,
+      ...prepData,
+      stage: 'prepared',
+      preparedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    this.notify();
+    if (firebaseService.isReady()) {
+      await firebaseService.savePreparationH1(this.currentSession);
+    }
+  }
+
+  // Aksi Khusus: Mulai Operasional Kasir Hari-H
+  activateHariH() {
+    if (!this.currentSession) return;
+    this.currentSession.stage = 'live';
+    this.currentSession.updatedAt = new Date().toISOString();
     this.notify();
   }
 
@@ -214,7 +303,6 @@ class Store {
         if (type === 'cash') return { ...item, soldCash: val };
         if (type === 'qris') return { ...item, soldQris: val };
         if (type === 'total') {
-          // If editing total in a simple view, preserve cash or assign
           const currentTotal = (item.soldCash || 0) + (item.soldQris || 0);
           const diff = val - currentTotal;
           return { ...item, soldCash: Math.max(0, (item.soldCash || 0) + diff) };
@@ -317,9 +405,9 @@ class Store {
     const archived = {
       ...JSON.parse(JSON.stringify(this.currentSession)),
       archivedAt: new Date().toISOString(),
-      status: 'closed'
+      status: 'closed',
+      stage: 'closed'
     };
-    // Check if session ID already exists in history
     const existingIndex = this.history.findIndex(h => h.id === archived.id);
     if (existingIndex >= 0) {
       this.history[existingIndex] = archived;
@@ -343,7 +431,7 @@ class Store {
   deleteArchivedSession(id) {
     this.history = this.history.filter(h => h.id !== id);
     this.saveHistory();
-    this.notify();
+    this.notify(false);
   }
 
   // --- TEMPLATES MANAGEMENT ---
@@ -425,4 +513,3 @@ export function decodeSessionData(encodedStr) {
 }
 
 export const store = new Store();
-
